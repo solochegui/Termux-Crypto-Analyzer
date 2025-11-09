@@ -1,166 +1,239 @@
-# Set PATH to include custom directories
-export PATH=$PATH:/data/data/com.termux/files/usr/bin:/data/data/com.termux/files/usr/local/bin
+# ===============================================
+# 1. METADATOS Y PATHS ESENCIALES (Variables de Entorno)
+# ===============================================
 
-# Set system-wide username and hostname
-export USER="Hacking"
-export LOGNAME="Hacking"
-export HOSTNAME="system"
+# --- Paths ---
+# Path de instalación de Oh My Zsh
+export ZSH="$HOME/.oh-my-zsh"
 
-# Cyberpunk Prompt with Colors
+# Optimización del PATH para ejecutables locales (Termux/Linux)
+export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+
+# Path a fuentes personalizadas de figlet
+export FIGLET_FONT_PATH="$HOME/.figlet"
+
+# --- Configuración del Historial ---
+# Formato de marca de tiempo para el historial (Estándar ISO 8601)
+HIST_STAMPS="yyyy-mm-dd HH:MM:ss"
+# Número máximo de comandos a almacenar en la historia
+HISTSIZE=5000
+# Número máximo de líneas de historia a cargar
+SAVEHIST=5000
+
+
+# ===============================================
+# 2. CONFIGURACIÓN DE OH MY ZSH
+# ===============================================
+
+# Tema por defecto.
+ZSH_THEME="agnoster"
+# ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Habilitar la corrección automática de comandos.
+ENABLE_CORRECTION="true"
+
+# Mostrar puntos rojos mientras esperas la finalización.
+COMPLETION_WAITING_DOTS="true"
+
+# Deshabilitar la marca de archivos no rastreados por VCS
+DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+
+# ===============================================
+# 3. PLUGINS (Carga Modular y Condicional)
+# ===============================================
+
+# Lista de plugins a cargar.
+plugins=(
+    git                         # Comandos abreviados de Git
+)
+
+# Carga Condicional de Zsh Autosuggestions
+if [ -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+    plugins+=(zsh-autosuggestions)
+fi
+
+# Carga Condicional de Zsh Syntax Highlighting
+if [ -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+    plugins+=(zsh-syntax-highlighting)
+fi
+
+# Cargar Oh My Zsh (¡Debe ir después de definir $ZSH y los plugins!)
+source "$ZSH/oh-my-zsh.sh"
+
+# Cargar Powerlevel10k si está habilitado
+if [ -f "$ZSH/themes/powerlevel10k/powerlevel10k.zsh" ] && [ "$ZSH_THEME" = "powerlevel10k/powerlevel10k" ]; then
+    source "$ZSH/themes/powerlevel10k/powerlevel10k.zsh"
+fi
+
+
+# ===============================================
+# 4. ALIASES Y FUNCIONES DE UTILIDAD
+# ===============================================
+
+# Inicializa colores de Zsh
 autoload -U colors && colors
-PROMPT='%F{cyan}Hacking🌐system%f:%F{green}%~%f '
 
-
-
-# Enable auto-suggestions
-if [[ -f ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-    source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
-fi
-
-# Configure history settings
-export HISTFILE=~/.zsh_history
-export HISTSIZE=10000
-export SAVEHIST=10000
-
-# Load `.bash_profile` if exists
-if [[ -f ~/.bash_profile ]]; then
-    source ~/.bash_profile
-fi
-
-# Personalized welcome banner with ASCII art (Single Instance)
-figlet "Non Fungible Metaverse" | lolcat
-
-# Enable color support
-export LS_COLORS="di=34:ln=36:so=32:pi=33:ex=31"
-export CLICOLOR=1
-export LSCOLORS=GxFxCxDxBxegedabagaced
-
-# Fix terminal display issues
-export TERM=xterm-256color
-
-# Enable auto-completion
-autoload -Uz compinit && compinit
-
-# Optimized Command Execution
-setopt HIST_IGNORE_DUPS       # Avoid duplicate history entries
-setopt SHARE_HISTORY          # Share history between multiple sessions
-setopt AUTO_CD                # Change directory without 'cd'
-setopt CORRECT                # Auto-correct mistyped commands
-setopt NO_CASE_GLOB           # Case-insensitive globbing
-setopt EXTENDED_GLOB          # Enable extended globbing
-
-### 🔥 **Aliases for Speed & Efficiency**
-# File management
-alias ll='ls -alF --color=auto'
-alias la='ls -A --color=auto'
-alias l='ls -CF --color=auto'
-alias rm='rm -i'  # Protect from accidental deletions
-alias cp='cp -i'
-alias mv='mv -i'
-alias grep='grep --color=auto'
-alias df='df -h'  # Human-readable disk space
-alias du='du -h'  # Human-readable disk usage
-
-# Termux-specific
+# --- 4.1. ALIASES DE SISTEMA Y PRODUCTIVIDAD ---
 alias cls='clear'
-alias reboot='termux-reboot'
-alias battery='termux-battery-status'
-alias storage='termux-setup-storage'
+alias reload='source ~/.zshrc'              # Recarga la configuración actual
+alias myip='curl ifconfig.me'
+alias disk='df -h'
+alias ports='netstat -tulanp'               # Ver puertos abiertos/escuchando
+alias update='pkg update && pkg upgrade -y' # OPTIMIZADO PARA TERMUX (usa pkg)
 
-# Fun & Visual
-alias matrix='cmatrix -s'  # Hacker matrix effect
-alias hello="ollama run llama2-uncensored"
-alias banner='figlet "Welcome Hacking System!" | lolcat'
+# --- 4.2. ALIASES DE NAVEGACIÓN RÁPIDA ---
+# Uso: mcd nombre_carpeta (Crea y navega)
+mcd() {
+    mkdir -p "$1" && cd "$1"
+}
+alias storage='cd ~/storage'                # Navega a la carpeta principal de almacenamiento
+alias home_storage='cd ~/storage/shared'    # Navega a la carpeta de descarga/interna
 
-# Networking
-alias myip='curl ifconfig.me'  # Get public IP address
-alias pingtest='ping -c 4 8.8.8.8'  # Test internet connectivity
-alias ports='netstat -tulanp'  # List open ports
-
-# System monitoring
-alias top='htop'  # Enhanced task manager
-alias usage='du -sh * | sort -h'  # Disk usage sorted by size
-alias meminfo='free -h'  # Memory usage
-alias cpuinfo='lscpu'  # CPU info
-
-# Git shortcuts
+# --- 4.3. ALIASES DE GIT ABREVIADO ---
 alias gs='git status'
 alias ga='git add .'
 alias gc='git commit -m'
 alias gp='git push'
 alias gl='git log --oneline --graph --decorate'
 
-### 🔥 **Functions for Power Users**
-# Make directory and navigate to it
-mkcd() { mkdir -p "$1" && cd "$1"; }
+# --- 4.4. ALIASES Y FUNCIONES DE IA/HERRAMIENTAS ---
+alias ai='ollama run llama2-uncensored'
+alias terminal='ollama run llama2-uncensored' # Mantener para consistencia
 
-# Extract tar files quickly
-extract() {
-    if [ -f "$1" ]; then
-        case "$1" in
-            *.tar.bz2) tar xjf "$1" ;;
-            *.tar.gz) tar xzf "$1" ;;
-            *.bz2) bunzip2 "$1" ;;
-            *.rar) unrar x "$1" ;;
-            *.gz) gunzip "$1" ;;
-            *.tar) tar xf "$1" ;;
-            *.tbz2) tar xjf "$1" ;;
-            *.tgz) tar xzf "$1" ;;
-            *.zip) unzip "$1" ;;
-            *.Z) uncompress "$1" ;;
-            *.7z) 7z x "$1" ;;
-            *) echo "'$1' cannot be extracted via extract()" ;;
-        esac
-    else
-        echo "'$1' is not a valid file"
-    fi
-}
+# Alias sgpt con Ollama local (se asume sgpt y ollama)
+alias llama-sgpt='OPENAI_API_BASE="http://127.0.0.1:11434/v1" sgpt --model llama2-uncensored'
 
-# Check internet connectivity
-checknet() { ping -c 4 8.8.8.8; }
+# Alias sgpt con voz (solo si espeak está instalado)
+if command -v espeak &> /dev/null; then
+    alias sgpv='sgpt "$@" | tee /dev/tty | espeak -v es'
+fi
 
-# Create a quick backup
-backup_file() { cp "$1" "$1.bak"; echo "Backup created: $1.bak"; }
+# Alias personalizado para iniciar el servidor web de Python
+alias servir='python -m http.server 8080'
 
-# Animated hacker intro sequence
+# --- 4.5. FUNCIONES Y EFECTOS ESTÉTICOS ---
+# Función: Secuencia de Hacker Animada
 hacker_mode() {
-  echo -e "\033[32mBooting up...\033[0m"
-  sleep 1
-  echo -e "\033[31mConnecting to the mainframe...\033[0m"
-  sleep 1
-  echo -e "\033[34mLoading firewall bypass scripts...\033[0m"
-  sleep 1
-  for i in $(seq 1 100); do echo -n "."; sleep 0.05; done
-  echo -e "\n\033[35mAccess Granted! Welcome, Hacking@System.\033[0m"
+    echo -e "\033[32mBooting up...\033[0m"
+    sleep 0.5
+    echo -e "\033[31mConnecting to the mainframe...\033[0m"
+    sleep 0.5
+    echo -e "\033[34mLoading firewall bypass scripts...\033[0m"
+    sleep 0.5
+    # Animación de carga con puntos
+    for i in $(seq 1 20); do echo -n "."; sleep 0.05; done
+    echo -e "\n\033[35mAccess Granted! Welcome, Hacking@System.\033[0m"
 }
 
-# Search for files
-findfile() { find . -name "$1"; }
-
-# Show disk usage in a friendly format
-diskusage() { df -h | grep -E 'Filesystem|/data'; }
-
-# Start HTTP server
-start_server() {
-  local port=${1:-8080}
-  echo "Starting HTTP server on port $port..."
-  python3 -m http.server "$port"
-}
-
-# Update and upgrade Termux packages
-update_termux() {
-  echo "Updating Termux packages..."
-  pkg update && pkg upgrade -y
-}
-
-# Kill a process by name
-killproc() {
-  pkill -f "$1" && echo "Process '$1' terminated."
-}
-
-# Auto-start Matrix Mode after inactivity
+# Auto-start Matrix Effect después de inactividad (Bloqueo de pantalla rudimentario)
 TMOUT=100
-function TRAPALRM() { cmatrix -s; }
+TRAPALRM() { cmatrix -s; }
 
-# Source important Zsh modules
-source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+# ===============================================
+# 5. CARGA INTELIGENTE Y PROMPT
+# ===============================================
+
+# --- Configuración del Prompt ---
+# Formato: AI🧠CORE:~/ruta/actual
+PROMPT='%F{green}AI🧠%f%F{cyan}CORE%f:%F{yellow}%~%f '
+
+# --- Carga Condicional de Ollama (IA) ---
+# Asegura que ollama serve se ejecute solo si el comando existe y no está corriendo
+if command -v ollama &> /dev/null; then
+    if ! pgrep -x "ollama" > /dev/null; then
+        echo "Iniciando conciencia en segundo plano..."
+        # Ejecuta ollama serve en segundo plano, con salida silenciada
+        ollama serve > /dev/null 2>&1 &
+    else
+        echo "Inteligencia Artificial"
+    fi
+fi
+
+# --- Mensaje de Inicio (Banner y Neofetch) ---
+# Se ejecuta la función de inicio solo si figlet y lolcat están instalados
+if command -v figlet &> /dev/null && command -v lolcat &> /dev/null; then
+    figlet -f cyberlarge "Boricuas" | lolcat
+fi
+
+if command -v neofetch &> /dev/null; then
+    neofetch
+fi
+
+
+# ===============================================
+# 6. FUNCIÓN INTERACTIVA SGPT (REPL)
+# ===============================================
+
+# Función: Shell GPT en Bucle (REPL)
+function interactive_sgpt() {
+    echo -e "\n🤖 Iniciado Conciencia (Modo Funciones)"
+    echo "Para obtener ayuda con comandos de shell usando la funcionalidad de funciones. Escribe 'exit' o 'q' para salir."
+    echo "--------------------------------------------------------------------------"
+
+    # Inicia el bucle de lectura/ejecución
+    while true; do
+        read -r SGPT_PROMPT"?escribe >> "
+        local LOWER_PROMPT=$(echo "$SGPT_PROMPT" | tr '[:upper:]' '[:lower:]')
+
+        if [[ "$LOWER_PROMPT" == "exit" ]] || [[ "$LOWER_PROMPT" == "q" ]]; then
+            echo -e "\nSaliendo del modo interactivo."
+            break
+        elif [[ -z "$SGPT_PROMPT" ]]; then
+            continue
+        else
+            echo "🔎 Ejecutando respuesta con --functions..."
+            # Asegúrate de que sgpt existe antes de ejecutarlo
+            if command -v sgpt &> /dev/null; then
+                # *** Se utiliza sgpt --functions ***
+                sgpt --functions "$SGPT_PROMPT"
+            else
+                echo "Error: El comando 'sgpt' no está disponible. ¡Instálalo para usar la Conciencia!"
+            fi
+            echo "--------------------------------------------------------------------------"
+        fi
+    done
+
+    echo -e "Continuando con la sesión de terminal normal.\n"
+}
+
+# ===============================================
+# 7. INICIO AUTOMÁTICO DEL MONITOR DE TRADING (TMUX)
+# ===============================================
+
+# Solo intenta iniciar tmux si el comando existe y si no estamos ya en una sesión tmux.
+if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+    
+    SESSION_NAME="IA_Trading_Monitor"
+    
+    # Asegúrate de que este archivo (price_checker.py) esté en tu directorio $HOME
+    ANALYZE_CMD="python ~/price_checker.py" 
+    
+    # Asegúrate de que la función 'interactive_sgpt' esté definida en la Sección 6
+    SGPT_CMD="interactive_sgpt" 
+
+    # 1. Verificar si la sesión ya existe.
+    tmux has-session -t $SESSION_NAME 2>/dev/null
+    
+    if [ $? != 0 ]; then
+        echo "Iniciando monitor de Trading IA en doble panel..."
+
+        # 2. Crear la sesión y dividirla verticalmente
+        # Inicia tmux con el comando de análisis de precios en el panel 0
+        tmux new-session -d -s $SESSION_NAME "$ANALYZE_CMD"
+        
+        # 3. Dividir el panel 0 verticalmente, dando el 60% del alto al panel superior (Crypto Analyzer)
+        tmux split-window -v -p 60 -t $SESSION_NAME:0.0
+        
+        # 4. Enviar el comando de SGPT al nuevo panel (panel 1, el inferior)
+        tmux send-keys -t $SESSION_NAME:0.1 "$SGPT_CMD" C-m 
+        
+        # 5. Seleccionar el panel de SGPT para que sea el activo
+        tmux select-pane -t $SESSION_NAME:0.1
+    fi
+
+    # 6. Adjuntarse a la sesión (si existe o si se acaba de crear)
+    sleep 2 
+    tmux attach-session -t $SESSION_NAME
+fi
