@@ -1,7 +1,7 @@
 # 🚀💎 Termux Crypto Analyzer & Trading Automation
 ## Proyecto Estelar de Non Fungible Metaverse (NFM) 🌌
 
-Este repositorio contiene las **herramientas esenciales** para el trading automatizado y el análisis de mercado de criptomonedas dentro del entorno **Termux/Zsh**. El objetivo es simplificar el proceso de **"Comprar la Caída" (Buy the Dip)** utilizando Órdenes Límite, respaldado por un **análisis técnico en tiempo real** de última generación.
+Este repositorio contiene las **herramientas esenciales** para el trading automatizado y el análisis de mercado de criptomonedas dentro del entorno **Termux/Zsh**. El objetivo es simplificar el proceso de **"Comprar la Caída" (Buy the Dip)** utilizando Órdenes Límite, respaldado por un **análisis técnico y predicción heurística en tiempo real**.
 
 ---
 
@@ -30,10 +30,11 @@ La herramienta utiliza métricas de 24h y 7d para evaluar el mercado, además de
 | **Moneda** | ₿ | Símbolo de la criptomoneda (Ej. BTC, ETH). | Identificación Rápida. |
 | **Precio** | 💲 | Precio actual en USD (o la divisa seleccionada). | Valor de Mercado en Tiempo Real. |
 | **24h (%) / 7d (%)** | ⏳ / 🗓️ | Variación porcentual de corto y mediano plazo. | Mide el **impulso** y la **tendencia general**. |
-| **Proyección 48h** | 🔮 | **ESTIMACIÓN** del precio en 48 horas. | Ayuda a visualizar el potencial de **ganancia a corto plazo**. |
-| **Análisis Técnico** | 🧠 | Resumen del sentimiento (*Golden Cross*, *Sobrecompra*). | Simula la interpretación de **MA y RSI**. |
+| **Proyección 48h** | 🔮 | **ESTIMACIÓN** del precio en 48 horas (asume momentum constante). | Ayuda a visualizar el potencial de ganancia a corto plazo. |
+| **Análisis Técnico** | 🧠 | Resumen del sentimiento (*Golden Cross*, *Sobrecompra*). | Simula la interpretación de **Medias Móviles (MA) y RSI**. |
 | **Alerta** | 🚨 | Señal clara de compra, venta o riesgo. | **Punto de Decisión Clave.** |
-| **PLR Sugerido** | 🎯 | **Precio Límite Recomendado** (2% de descuento en DIP). | Valor exacto para ingresar como **orden de compra**. |
+| **Límite Sugerido** | 🎯 | **Precio Límite Recomendado** (PLR). | Valor exacto para ingresar como orden de compra. |
+| **Tiempo al PLR** | ⏱️ | **Predicción heurística** del tiempo (horas/días) para alcanzar el PLR. | Estima la duración de la operación basándose en el momentum de 24h. |
 
 ---
 
@@ -44,7 +45,7 @@ El script genera alertas avanzadas basadas en la lógica de inversión de NFM:
 | Alerta | Símbolo | Condición | Estrategia Recomendada |
 | :--- | :--- | :--- | :--- |
 | **💸 ¡VENTA! (FOMO)** | 📉 | Subida fuerte (> 10%) en 24h **Y** subida fuerte en 7d (> 15%). | **Toma de Ganancias (Take Profit).** Alto riesgo de corrección. |
-| **📉 ¡COMPRA! (DIP)** | 🛒 | Caída > 4.0% en 24h **Y** tendencia positiva (> 0%) en 7d. | **OPORTUNIDAD IDEAL.** La alerta activa el PLR. |
+| **📉 ¡COMPRA! (DIP)** | 🛒 | Caída > 4.0% en 24h **Y** tendencia positiva (> 0%) en 7d. | **OPORTUNIDAD IDEAL.** La alerta activa el PLR y la estimación de tiempo. |
 | **🔥 RIESGO/CAPITULACIÓN** | 🛑 | Caída muy fuerte (> 8.0%) en 24h **O** gran caída en 7d (<-10%). | **CAUTELA MÁXIMA.** Posible ruptura de soportes. |
 | **🟢 MOMENTUM SALUDABLE** | ✅ | Crecimiento moderado (> 2%) en 24h **Y** buena subida (> 8%) en 7d. | **HOLD/ACUMULACIÓN.** Crecimiento sostenible. |
 | **⚠️ CORRECCIÓN C/P** | 🟡 | Caída ligera/moderada en 24h después de fuerte subida en 7d. | **NEUTRAL.** El activo se está "enfriando". |
@@ -58,8 +59,9 @@ El script genera alertas avanzadas basadas en la lógica de inversión de NFM:
 La estrategia se basa en el **PLR Sugerido** solo cuando se activa la alerta **🛒 ¡COMPRA! (DIP)**:
 
 1.  **Espera la Señal:** Monitorea la alerta **🛒 ¡COMPRA! (DIP)**.
-2.  **Cálculo del PLR:** El precio sugerido se calcula automáticamente al **2% por debajo del precio actual de mercado** (Estrategia de Órdenes Límite).
-3.  **Acción:** Coloca tu orden de Compra Límite en tu plataforma de trading (ej. Coinbase Advanced, Binance) utilizando el precio exacto de la columna **🎯 PLR Sugerido**.
+2.  **Cálculo del PLR:** El precio sugerido se calcula automáticamente al **2% por debajo del precio actual de mercado**.
+3.  **Acción:** Coloca tu orden de Compra Límite en tu plataforma de trading (ej. Coinbase Advanced, Binance) utilizando el precio exacto de la columna **🎯 Límite Sugerido**.
+4.  **Gestión de Tiempo:** Usa la columna **⏱️ Tiempo al PLR** como referencia para saber cuánto podrías esperar la ejecución, si el momentum actual se mantiene.
 
 ### IV. Instalación y Uso Básico (Termux) 📱
 

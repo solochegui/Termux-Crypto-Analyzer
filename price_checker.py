@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Termux-Crypto-Analyzer - price_checker.py
-Analizador avanzado de precios crypto (CLI) con Proyección, Análisis Técnico y notificaciones Telegram.
+Analizador avanzado de precios crypto (CLI) con Proyección, Análisis Técnico,
+Estimación de Tiempo al PLR y notificaciones Telegram.
 Creado por Non Fungible Metaverse.
 """
 from __future__ import annotations
@@ -12,36 +13,38 @@ import os
 import shutil
 import sys
 import time
-from datetime import datetime
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta # Importar timedelta
+from typing import Dict, List, Optional, Union
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# Optional dependencies
+# Optional dependencies for rich output
 try:
     from tabulate import tabulate  # type: ignore
     HAS_TABULATE = True
-except Exception:
+except ImportError:
     HAS_TABULATE = False
 
 try:
     from colorama import Fore, Back, Style, init as colorama_init  # type: ignore
-    # Se añade autoreset para simplificar el código
     colorama_init(autoreset=True) 
     HAS_COLORAMA = True
-except Exception:
+except ImportError:
     HAS_COLORAMA = False
-    # --- Clases de reserva ANSI para cuando colorama no está instalado ---
+    # Fallback classes for ANSI colors if colorama is not installed
     class Ansi:
         RESET = ""
         RED = ""
         GREEN = ""
         CYAN = ""
         YELLOW = ""
+        MAGENTA = ""
+        BLUE = ""
+        BLACK = "" # For Back.GREEN + Fore.BLACK
         BOLD = ""
-        BG_RED = ""
+        BG_GREEN = ""
         BRIGHT = ""
         DIM = ""
         NORMAL = ""
@@ -57,33 +60,36 @@ except Exception:
     
 # --- 1. CONFIGURACIÓN MEJORADA & CREDENCIALES ---
 
-# NOTA IMPORTANTE DE SEGURIDAD: 
-# Estos campos están vacíos por defecto. PARA USAR TELEGRAM, 
-# DEBE CONFIGURAR LAS VARIABLES DE ENTORNO EN TERMUX: 
-# export TELEGRAM_BOT_TOKEN="SU_TOKEN"
-# export TELEGRAM_CHAT_ID="SU_CHAT_ID"
-TELEGRAM_BOT_TOKEN = "" 
-TELEGRAM_CHAT_ID = ""   
+# IMPORTANT SECURITY NOTE: 
+# These fields are empty by default. FOR TELEGRAM, 
+# YOU MUST CONFIGURE ENVIRONMENT VARIABLES IN TERMUX: 
+# export TELEGRAM_BOT_TOKEN="YOUR_TOKEN"
+# export TELEGRAM_CHAT_ID="YOUR_CHAT_ID"
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "") 
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")   
 
-# Defaults
+# Defaults for cryptocurrencies, fiat currency, and update interval
 DEFAULT_CRYPTOS = "bitcoin,ethereum,solana,boricoin,pepe,bonk,ripple,xyo"
 DEFAULT_CURRENCY = "usd"
-DEFAULT_INTERVAL = 10
-API_URL = "https://api.coingecko.com/api/v3/coins/markets"
-RATE_LIMIT_WAIT_TIME = 60 # Tiempo de espera recomendado para HTTP 429
+DEFAULT_INTERVAL = 10 # seconds
 
-# Logging config
+# CoinGecko API endpoint and rate limit handling
+API_URL = "https://api.coingecko.com/api/v3/coins/markets"
+RATE_LIMIT_WAIT_TIME = 60 # Recommended wait time for HTTP 429
+
+# Logging configuration
 logger = logging.getLogger("price_checker")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-# --- 2. FUNCIONES AUXILIARES DE CONEXIÓN Y UTILIDADES ---
+# --- 2. AUXILIARY CONNECTION AND UTILITY FUNCTIONS ---
 
 def create_session(retries: int = 3, backoff_factor: float = 1.0, status_forcelist: Optional[List[int]] = None) -> requests.Session:
-    """Configura una sesión HTTP con reintentos para manejar errores de red y Rate Limits."""
+    """Configures an HTTP session with retries for network errors and rate limits."""
     status_forcelist = status_forcelist or [429, 500, 502, 503, 504] 
     session = requests.Session()
     retry = Retry(
@@ -101,8 +107,8 @@ def create_session(retries: int = 3, backoff_factor: float = 1.0, status_forceli
     return session
 
 
-def clear_terminal():
-    """Limpia la terminal (funciona en Windows, Linux y Termux)."""
+def clear_terminal() -> None:
+    """Clears the terminal (works on Windows, Linux, and Termux)."""
     if os.name == "nt":
         os.system("cls")
     else:
@@ -110,7 +116,7 @@ def clear_terminal():
 
 
 def fetch_data(session: requests.Session, cryptos: str, currency: str, per_page: int = 100, timeout: int = 10) -> Optional[List[dict]]:
-    """Obtiene datos desde CoinGecko con manejo de reintentos."""
+    """Fetches data from CoinGecko with retry handling."""
     params = {
         "vs_currency": currency,
         "ids": cryptos,
@@ -126,38 +132,38 @@ def fetch_data(session: requests.Session, cryptos: str, currency: str, per_page:
         return resp.json()
     except requests.exceptions.HTTPError as e:
         if resp.status_code == 429:
-            logger.error(f"Rate Limit (429) alcanzado. ⚠️ Esperando {RATE_LIMIT_WAIT_TIME} segundos...")
+            logger.error(f"Rate Limit (429) hit. ⚠️ Waiting {RATE_LIMIT_WAIT_TIME} seconds...")
             time.sleep(RATE_LIMIT_WAIT_TIME)
         else:
-            logger.warning("Error HTTP (%s) al conectar con CoinGecko: %s", resp.status_code, e)
+            logger.warning("HTTP Error (%s) connecting to CoinGecko: %s", resp.status_code, e)
         return None
     except requests.exceptions.RequestException as e:
-        logger.warning("Error de conexión con CoinGecko: %s", e)
+        logger.warning("Connection Error with CoinGecko: %s", e)
         return None
 
-# --- 3. FUNCIONES DE FORMATO Y LÓGICA DE ALERTA ---
+# --- 3. FORMATTING AND ALERT LOGIC FUNCTIONS ---
 
 def format_price(price: Optional[float], decimal_limit: int = 2) -> str:
-    """Formatea el precio, usando más decimales para valores bajos."""
+    """Formats the price, using more decimals for very low values."""
     if price is None:
         return "N/A"
     try:
         if price < 0.1:
             return f"${price:,.8f}"
         return f"${price:,.{decimal_limit}f}"
-    except Exception:
+    except (ValueError, TypeError):
         return str(price)
 
 def format_limit_price(price: Optional[float]) -> str:
-    """Calcula y formatea el precio sugerido para una orden limitada (2% de descuento)."""
+    """Calculates and formats the suggested limit price (2% discount)."""
     if price is None:
         return "N/A"
     
-    limit_price = price * (1 - 0.02) # Precio 2% más bajo
+    limit_price = price * (1 - 0.02) # 2% lower price
     return format_price(limit_price, decimal_limit=4) 
 
 def colorize_percent(value: Optional[float]) -> str:
-    """Aplica color a los porcentajes de cambio (verde positivo, rojo negativo)."""
+    """Applies color to percentage changes (green for positive, red for negative)."""
     if value is None:
         return "N/A"
     sign = f"{value:+.2f}%"
@@ -171,52 +177,51 @@ def colorize_percent(value: Optional[float]) -> str:
         return Fore.CYAN + sign
 
 def compute_alert(change_24h: Optional[float], change_7d: Optional[float]) -> str:
-    """Calcula la alerta de compra/venta/riesgo basada en la lógica avanzada de Non Fungible Metaverse (7 Señales)."""
+    """Calculates the buy/sell/risk alert based on advanced Non Fungible Metaverse logic (7 Signals)."""
     if change_24h is None or change_7d is None:
         return ""
     
-    # 1. Señal de VENTA: Posible sobrecompra / Toma de Ganancias (Take Profit)
+    # 1. SELL Signal: Potential Overbought / Take Profit (FOMO)
     if change_24h > 10.0 and change_7d > 15.0:
         return (Back.GREEN + Fore.BLACK + " 💸 ¡VENTA! (FOMO) ") if HAS_COLORAMA else "💸 ¡VENTA! (FOMO)"
 
-    # 2. Señal de COMPRA: Caída fuerte en 24h (> 4%) pero tendencia positiva en 7d (> 0%) - Comprar el DIP
+    # 2. BUY Signal: Strong 24h drop (> 4%) but positive 7d trend (> 0%) - Buy the Dip
     if change_24h < -4.0 and change_7d > 0:
         return (Back.BLUE + Fore.WHITE + " 📉 ¡COMPRA! (DIP) ") if HAS_COLORAMA else "📉 ¡COMPRA! (DIP)"
 
-    # 3. Señal de RIESGO/CAPITULACIÓN: Fuerte caída de corto y mediano plazo
+    # 3. RISK/CAPITULATION Signal: Strong short- and medium-term drop
     if change_24h < -8.0 or change_7d < -10.0:
         return (Fore.RED + "🔥 RIESGO/CAPITULACIÓN") if HAS_COLORAMA else "🔥 RIESGO/CAPITULACIÓN"
         
-    # --- NUEVAS SEÑALES ANALÍTICAS ---
+    # --- NEW ANALYTICAL SIGNALS ---
 
-    # 4. Tendencia de CRECIMIENTO SOSTENIBLE: Momentum Alcista Saludable (Buy)
+    # 4. SUSTAINABLE GROWTH Trend: Healthy Bullish Momentum (Buy)
     if change_24h > 2.0 and change_7d > 8.0:
         return (Fore.MAGENTA + "🟢 MOMENTUM SALUDABLE") if HAS_COLORAMA else "🟢 MOMENTUM SALUDABLE"
 
-    # 5. Corrección de CORTO PLAZO (Warning/Hold)
+    # 5. SHORT-TERM CORRECTION (Warning/Hold)
     if -4.0 <= change_24h < -2.0 and change_7d > 10.0:
         return (Fore.YELLOW + "⚠️ CORRECCIÓN C/P") if HAS_COLORAMA else "⚠️ CORRECCIÓN C/P"
 
-    # 6. Alerta de LATERALIZACIÓN (RANGO): Consolidación (Neutral)
+    # 6. LATERALIZATION Alert (RANGE): Consolidation (Neutral)
     if -1.5 <= change_24h <= 1.5 and -3.0 <= change_7d <= 3.0:
         return (Fore.BLUE + "😴 RANGO/CONSOLIDACIÓN") if HAS_COLORAMA else "😴 RANGO/CONSOLIDACIÓN"
 
-    # 7. Señal de Estabilidad (Umbral más estricto ahora)
+    # 7. STABILITY Signal (Stricter threshold now)
     if -1.0 <= change_24h <= 1.0:
         return (Fore.CYAN + "⚖️ ESTABLE") if HAS_COLORAMA else "⚖️ ESTABLE"
         
-    return "" # Por defecto
+    return "" # Default if no category matches
 
 def compute_projection(current_price: Optional[float], change_24h: Optional[float]) -> str:
     """
-    Calcula una proyección simple del precio a 48 horas (ASUMCIÓN LINEAL).
-    NO es un modelo predictivo avanzado, sino una estimación de momentum.
+    Calculates a simple 48-hour price projection (LINEAR ASSUMPTION).
+    This is NOT an advanced predictive model, but a momentum estimate.
     """
     if current_price is None or change_24h is None:
         return "N/A"
     
     try:
-        # Factor de cambio: (1 + cambio_24h/100)
         projection_factor = 1 + (change_24h / 100.0)
         projected_price = current_price * projection_factor
         
@@ -231,46 +236,91 @@ def compute_projection(current_price: Optional[float], change_24h: Optional[floa
         else:
             return Fore.CYAN + projection_str
 
-    except Exception:
+    except (ValueError, TypeError):
         return "N/A"
 
 def compute_technical_sentiment(change_24h: Optional[float], change_7d: Optional[float]) -> str:
-    """Simula un resumen de análisis técnico (ej. Medias Móviles + RSI) basado en el impulso."""
+    """Simulates a technical analysis summary (e.g., Moving Averages + RSI) based on momentum."""
     if change_24h is None or change_7d is None:
         return ""
     
-    # 1. FUERTE COMPRA: Impulso alcista claro y sostenido
+    # 1. STRONG BUY: Clear and sustained bullish momentum
     if change_24h > 5.0 and change_7d > 10.0:
         return (Fore.GREEN + Style.BRIGHT + "FUERTE COMPRA (Golden Cross)") if HAS_COLORAMA else "FUERTE COMPRA"
     
-    # 2. COMPRA: Impulso alcista reciente (Breakout) o buen rebote
+    # 2. BUY: Recent bullish momentum (Breakout) or good rebound
     if change_24h > 2.0 and change_7d > 0:
         return (Fore.GREEN + "COMPRA") if HAS_COLORAMA else "COMPRA"
         
-    # 3. FUERTE VENTA: Caída severa y tendencia negativa (Death Cross)
+    # 3. STRONG SELL: Severe drop and negative trend (Death Cross)
     if change_24h < -5.0 and change_7d < -10.0:
         return (Fore.RED + Style.BRIGHT + "FUERTE VENTA (Death Cross)") if HAS_COLORAMA else "FUERTE VENTA"
 
-    # 4. VENTA: Tendencia bajista clara
+    # 4. SELL: Clear bearish trend
     if change_24h < -2.0 and change_7d < 0:
         return (Fore.RED + "VENTA") if HAS_COLORAMA else "VENTA"
         
-    # 5. NEUTRAL / CONSOLIDACIÓN: Sin dirección clara
+    # 5. NEUTRAL / CONSOLIDATION: No clear direction
     if -2.0 <= change_24h <= 2.0 and -5.0 <= change_7d <= 5.0:
         return (Fore.YELLOW + "NEUTRAL") if HAS_COLORAMA else "NEUTRAL"
 
-    # 6. NEUTRAL / SOBRECOMPRA: Riesgo de corrección (RSI > 70)
+    # 6. NEUTRAL / OVERBOUGHT: Risk of correction (RSI > 70)
     if change_24h > 7.0 and change_7d > 20.0:
         return (Fore.MAGENTA + "NEUTRAL (Sobrecompra)") if HAS_COLORAMA else "NEUTRAL (Sobrecompra)"
 
     return "NEUTRAL"
 
-
-# --- 4. FUNCIÓN DE TABLA Y NOTIFICACIÓN DE TELEGRAM ---
-
-def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str):
+def compute_time_to_plr(current_price: Optional[float], change_24h: Optional[float], suggested_limit_price: Optional[float]) -> str:
     """
-    Formatea e imprime los datos en la terminal, incluyendo la proyección de 48h y el análisis técnico.
+    Estimates the time it would take for the price to reach the Suggested Limit Price (PLR),
+    assuming the 24h change (velocity) remains constant.
+    """
+    if current_price is None or change_24h is None or suggested_limit_price is None or suggested_limit_price == 0:
+        return "N/A"
+    
+    # 1. Calculate the percentage difference between the current price and the PLR.
+    target_change_pct = ((suggested_limit_price - current_price) / current_price) * 100
+    
+    # 2. Velocity of change per hour (assuming change_24h is % in 24h)
+    velocity_per_hour = change_24h / 24.0
+    
+    # Handle cases with zero velocity or incompatible direction
+    if abs(velocity_per_hour) < 0.001:
+        return "N/A (Velocidad 0)"
+    
+    if (target_change_pct > 0 and velocity_per_hour < 0) or \
+       (target_change_pct < 0 and velocity_per_hour > 0):
+        return "N/A (Dir. Incompatible)"
+
+    try:
+        # 3. Calculate the hours needed (Hours = Distance / Velocity)
+        hours_needed = target_change_pct / velocity_per_hour
+        
+        if hours_needed < 0: # Should be caught by direction check, but good for robustness
+            return "N/A (Reversión Necesaria)"
+
+        # 4. Format the result to days/hours/minutes
+        if hours_needed >= 24 * 30: # >= 30 days
+            months = round(hours_needed / (24 * 30))
+            return f"~{months} meses"
+        elif hours_needed >= 24: # >= 1 day
+            days = round(hours_needed / 24)
+            return f"~{days} días"
+        elif hours_needed > 1: # > 1 hour
+            return f"~{round(hours_needed, 1)} horas"
+        else: # <= 1 hour
+            minutes = max(1, round(hours_needed * 60)) # At least 1 minute
+            return f"~{minutes} minutos"
+
+    except (ZeroDivisionError, ValueError, TypeError):
+        return "N/A"
+
+# --- 4. TABLE PRINTING AND TELEGRAM NOTIFICATION FUNCTION ---
+
+def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str) -> Dict[str, Union[Dict[str, float], List[Dict[str, str | float]]]]:
+    """
+    Formats and prints the data to the terminal, including 48h projection, technical analysis,
+    and estimated time to PLR.
     """
     rows = []
     buy_signals_data: List[Dict[str, str | float]] = [] 
@@ -285,10 +335,14 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str):
 
         alert_raw = compute_alert(change_24h, change_7d)
         
+        # Calculate Suggested Limit Price (PLR) - float value
+        limit_suggered_float: Optional[float] = None
         limit_suggered_str = ""
-        # Solo guardar para Telegram si es una señal de COMPRA (DIP)
-        if "¡COMPRA! (DIP)" in alert_raw:
-            limit_suggered_str = format_limit_price(price)
+
+        # Only calculate PLR and add to Telegram signals if it's a BUY (DIP) alert
+        if "¡COMPRA! (DIP)" in alert_raw and price is not None:
+            limit_suggered_float = price * (1 - 0.02) # 2% discount from current price
+            limit_suggered_str = format_price(limit_suggered_float, decimal_limit=4)
             buy_signals_data.append({
                 "symbol": symbol,
                 "name": name,
@@ -306,8 +360,11 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str):
         
         projection_48h_str = compute_projection(price, change_24h)
         technical_sentiment_str = compute_technical_sentiment(change_24h, change_7d)
+        
+        # --- New: Estimated Time to PLR ---
+        time_to_plr_str = compute_time_to_plr(price, change_24h, limit_suggered_float)
 
-        # Delta desde el precio previo
+        # Delta from previous price
         delta_str = ""
         prev = prev_prices.get(name)
         if prev is not None and price is not None:
@@ -316,7 +373,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str):
                 delta_str = f"{pct:+.2f}%"
                 if HAS_COLORAMA:
                     delta_str = (Fore.GREEN + delta_str) if pct >= 0 else (Fore.RED + delta_str)
-            except Exception:
+            except (ValueError, TypeError):
                 delta_str = ""
 
         rows.append({
@@ -329,19 +386,23 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str):
             "Análisis Técnico": technical_sentiment_str,
             "Alerta": alert_str,
             "Límite Sugerido": limit_suggered_str, 
+            "Tiempo al PLR": time_to_plr_str, # <--- ADDED HERE!
             "MarketCap": market_cap_str,
             "_id": name,
             "_price_raw": price,
         })
 
-    # Uso de tabulate o fallback simple
-    headers = ["Moneda", "Precio", "Δ(prev)", "24h", "7d", "Proyección 48h", "Análisis Técnico", "Alerta", "Límite Sugerido", "MarketCap"]
+    # Headers for the table, now including "Tiempo al PLR"
+    headers = ["Moneda", "Precio", "Δ(prev)", "24h", "7d", "Proyección 48h", "Análisis Técnico", "Alerta", "Límite Sugerido", "Tiempo al PLR", "MarketCap"]
+    
     if HAS_TABULATE:
-        active_headers = [h for h in headers if h != "Límite Sugerido" or any(r["Límite Sugerido"] for r in rows)]
+        # Filter out "Límite Sugerido" and "Tiempo al PLR" if no buy signals are present for cleaner output
+        active_headers = [h for h in headers if h not in ["Límite Sugerido", "Tiempo al PLR"] or any(r["Límite Sugerido"] for r in rows)]
         table_data = [[r[h] for h in active_headers] for r in rows]
         print(tabulate(table_data, headers=active_headers, tablefmt="plain"))
     else:
-        active_headers = headers
+        # Fallback for when tabulate is not installed
+        active_headers = [h for h in headers if h not in ["Límite Sugerido", "Tiempo al PLR"] or any(r["Límite Sugerido"] for r in rows)]
         col_widths = {h: len(h) for h in active_headers}
         for r in rows:
             for h in active_headers:
@@ -349,7 +410,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str):
         sep = "  "
         header_line = sep.join(h.ljust(col_widths[h]) for h in active_headers)
         print(header_line)
-        print("—"*4 + " ₿ " + "—"*4 + " 📈 " + "—"*4 + " 💸 " + "—"*4)
+        print("—" * (len(header_line))) # Dynamic separator line
         for r in rows:
             line = sep.join(str(r[h]).ljust(col_widths[h]) for h in active_headers)
             print(line)
@@ -361,9 +422,9 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str):
 
 
 def send_telegram_message(bot_token: str, chat_id: str, message: str) -> bool:
-    """Envía un mensaje a un chat de Telegram específico."""
+    """Sends a message to a specific Telegram chat."""
     if not bot_token or not chat_id:
-        logger.debug("Omisión de Telegram: Token o Chat ID no configurados.")
+        logger.debug("Telegram skipped: Token or Chat ID not configured.")
         return False
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -372,39 +433,41 @@ def send_telegram_message(bot_token: str, chat_id: str, message: str) -> bool:
         resp.raise_for_status()
         return True
     except requests.RequestException as e:
-        logger.warning("Error enviando Telegram: %s", e)
+        logger.warning("Error sending Telegram message: %s", e)
         return False
 
 
-# --- 5. FUNCIÓN PRINCIPAL DE EJECUCIÓN (MAIN) ---
+# --- 5. MAIN EXECUTION FUNCTION ---
 
-def parse_args():
-    """Define y parsea los argumentos de la línea de comandos."""
-    parser = argparse.ArgumentParser(description="Analizador avanzado de precios crypto (CLI)")
-    parser.add_argument("--cryptos", type=str, default=os.environ.get("CRYPTOS", DEFAULT_CRYPTOS),
-                        help=f"IDs de CoinGecko separados por comas (default: {DEFAULT_CRYPTOS})")
-    parser.add_argument("--currency", type=str, default=os.environ.get("CURRENCY", DEFAULT_CURRENCY),
-                        help="Moneda fiat (default: usd)")
-    parser.add_argument("--interval", type=int, default=int(os.environ.get("UPDATE_INTERVAL", DEFAULT_INTERVAL)),
-                        help=f"Intervalo de actualización en segundos (default: {DEFAULT_INTERVAL})")
-    parser.add_argument("--retries", type=int, default=3, help="Reintentos HTTP")
-    parser.add_argument("--backoff", type=float, default=1.0, help="Factor de backoff entre reintentos")
-    parser.add_argument("--per-page", type=int, default=100, help="Número de resultados por página")
-    parser.add_argument("--verbose", action="store_true", help="Mostrar logs DEBUG")
-    parser.add_argument("--no-clear", action="store_true", help="No limpiar terminal en cada actualización")
+def parse_args() -> argparse.Namespace:
+    """Defines and parses command-line arguments."""
+    parser = argparse.ArgumentParser(description="Advanced Crypto Price Analyzer (CLI)")
+    parser.add_argument("--cryptos", type=str, default=DEFAULT_CRYPTOS,
+                        help=f"Comma-separated CoinGecko IDs (default: {DEFAULT_CRYPTOS})")
+    parser.add_argument("--currency", type=str, default=DEFAULT_CURRENCY,
+                        help=f"Fiat currency (default: {DEFAULT_CURRENCY})")
+    parser.add_argument("--interval", type=int, default=DEFAULT_INTERVAL,
+                        help=f"Update interval in seconds (default: {DEFAULT_INTERVAL})")
+    parser.add_argument("--retries", type=int, default=3, help="HTTP retries")
+    parser.add_argument("--backoff", type=float, default=1.0, help="Backoff factor between retries")
+    parser.add_argument("--per-page", type=int, default=100, help="Number of results per page")
+    parser.add_argument("--verbose", action="store_true", help="Show DEBUG logs")
+    parser.add_argument("--no-clear", action="store_true", help="Do not clear terminal on each update")
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
-    telegram_chat = os.environ.get("TELEGRAM_CHAT_ID") or TELEGRAM_CHAT_ID
+    # Telegram credentials from environment variables or hardcoded (empty by default)
+    # Using os.environ.get is safer and more flexible
+    telegram_token = TELEGRAM_BOT_TOKEN 
+    telegram_chat = TELEGRAM_CHAT_ID
     
     if not telegram_token or not telegram_chat:
-        logger.warning("Telegram deshabilitado: TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID no configurados.")
+        logger.warning("Telegram notifications disabled: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in environment.")
 
     session = create_session(retries=args.retries, backoff_factor=args.backoff)
     prev_prices: Dict[str, float] = {}
@@ -415,7 +478,7 @@ def main():
             if not args.no_clear:
                 clear_terminal()
             
-            # --- TÍTULO DECORADO ---
+            # --- DECORATED TITLE ---
             print(Fore.CYAN + "✨ " + Style.BRIGHT + "NON FUNGIBLE METAVERSE" + Style.RESET_ALL + Fore.CYAN + " ✨")
             print(f"--- 🧠 Analizador Avanzado de Precios Crypto (CLI) 🚀 ---")
             print(f"Última Actualización: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC | Cryptos: {args.cryptos} | Fiat: {args.currency}")
@@ -426,24 +489,26 @@ def main():
                 new_prev = result["prev_prices"]
                 buy_signals = result["buy_signals"]
                 
-                # Si Telegram configurado y hay señales de compra, enviar notificación
+                # If Telegram is configured and there are buy signals, send a notification
                 if buy_signals and telegram_token and telegram_chat:
                     msg_parts = [
                         "🚨 *ALERTA DE COMPRA \\(DIP\\) EN EL METAVERSO* 🚨",
                         "El mercado presenta oportunidades de entrada:",
-                        "" # Línea vacía
+                        "" # Empty line
                     ]
                     
                     for signal in buy_signals:
-                        symbol = signal['symbol'].replace('_', '\\_')
-                        name = signal['name'].replace('_', '\\_')
+                        # Escape Telegram MarkdownV2 special characters
+                        symbol = str(signal['symbol']).replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace('`', '\\`')
+                        name = str(signal['name']).replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace('`', '\\`')
                         
                         msg_parts.append(
                             f"💰 *{symbol}* \\({name}\\) \\- ¡A la Caza\\! 🎯"
                         )
                         msg_parts.append(
-                            f"   \\- Precio Actual: *{format_price(signal['price']).replace('$', '\\$')}*"
+                            f"   \\- Precio Actual: *{format_price(signal['price']).replace('$', '\\$').replace('.', '\\.')}*" # Escape '.' in price
                         )
+                        # Escape '+' and '-' in percentages
                         msg_parts.append(
                             f"   \\- Var\\. 24h: {colorize_percent(signal['change_24h']).replace('+', '\\+').replace('-', '\\-')}"
                         )
@@ -451,9 +516,9 @@ def main():
                             f"   \\- Var\\. 7d: {colorize_percent(signal['change_7d']).replace('+', '\\+').replace('-', '\\-')}"
                         )
                         msg_parts.append(
-                            f"   \\- *Límite Sugerido \\(\\-2\\%\\):* *{signal['limit_price'].replace('$', '\\$')}* ✍️"
+                            f"   \\- *Límite Sugerido \\(\\-2\\%\\):* *{str(signal['limit_price']).replace('$', '\\$').replace('.', '\\.')}* ✍️" # Escape '.' in price
                         )
-                        msg_parts.append("") # Línea vacía
+                        msg_parts.append("") # Empty line
 
                     msg_parts.append("---")
                     msg_parts.append(Style.BRIGHT + "Estrategia de inversión compartida por *Non Fungible Metaverse*\\. 🚀")
@@ -461,20 +526,23 @@ def main():
                     msg = "\n".join(msg_parts)
                     
                     if send_telegram_message(telegram_token, telegram_chat, msg):
-                        logger.info("Notificación Telegram de compra enviada. 🔔")
+                        logger.info("Telegram buy notification sent. 🔔")
 
                 prev_prices.update({k: v for k, v in new_prev.items() if v is not None})
             else:
-                logger.warning("No se obtuvieron datos de CoinGecko. Reintentando... 🔄")
+                logger.warning("No data retrieved from CoinGecko. Retrying... 🔄")
 
-            # --- MENSAJE DE CIERRE DECORADO ---
+            # --- DECORATED CLOSING MESSAGE ---
             print("=" * min(120, shutil.get_terminal_size((120, 20)).columns))
-            print(Fore.YELLOW + f"Actualizando en {args.interval} segundos... (Ctrl+C para detener 🛑)")
+            print(Fore.YELLOW + f"Updating in {args.interval} seconds... (Ctrl+C to stop 🛑)")
             time.sleep(max(1, args.interval))
 
     except KeyboardInterrupt:
-        print(Fore.MAGENTA + "\nAnalizador detenido. ¡Buen trading en el 🌐 Metaverse!")
+        print(Fore.MAGENTA + "\nAnalyzer stopped. Happy trading in the 🌐 Metaverse!")
         sys.exit(0)
+    except Exception as e:
+        logger.critical(f"An unexpected error occurred: {e}", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
