@@ -1,3 +1,5 @@
+# [Script Completo price_checker.py]
+
 #!/usr/bin/env python3
 """
 Termux-Crypto-Analyzer - price_checker.py
@@ -20,9 +22,6 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# --- DESHABILITACIÓN COMPLETA DE LIBRERÍAS DE FORMATO ---
-# Se usan variables de entorno para las credenciales, como antes.
-
 # >>> INTEGRACIÓN COINBASE - AJUSTADA PARA SDK 'coinbase' <<<
 try:
     from coinbase.wallet.client import Client as CoinbaseClient
@@ -30,7 +29,7 @@ try:
 except ImportError:
     HAS_COINBASE = False
 # >>> FIN INTEGRACIÓN COINBASE <<<
-    
+
 # --- 1. CONFIGURACIÓN & CREDENCIALES ---
 
 # Credenciales de Plataformas (Obtenidas de variables de entorno)
@@ -54,7 +53,6 @@ logger = logging.getLogger("price_checker")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
@@ -132,15 +130,17 @@ def format_percent(value: Optional[float]) -> str:
         return "N/A"
     return f"{value:+.2f}%"
 
+# Se elimina la función escape_markdown_v2 ya que se usa HTML Parse Mode
+
 def compute_alert(change_24h: Optional[float], change_7d: Optional[float]) -> str:
     """Calculates the buy/sell/risk alert (texto plano) con más variedades."""
     if change_24h is None or change_7d is None:
         return ""
-    
+
     # 1. Señal de VENTA / EUFORIA (FOMO)
     if change_24h > 10.0 and change_7d > 15.0:
         return "💸 VENTA! (FOMO)"
-        
+
     # 2. Señal de RIESGO / VENTA (BULL TRAP)
     elif change_24h > 6.0 and change_7d < 0.0:
         return "⚠️ BULL TRAP / VENTA C/P"
@@ -148,12 +148,12 @@ def compute_alert(change_24h: Optional[float], change_7d: Optional[float]) -> st
     # 3. Señal de RIESGO MÁXIMO (CAPITULACIÓN)
     elif change_24h < -8.0 and change_7d < -15.0:
         return "💀 CAPITULACIÓN/PÁNICO"
-    
+
     # 4. Señal de COMPRA FUERTE (REVERSIÓN V o B) - Rebote en 24h tras caída de 7d
     # Ocurre cuando ya viste Capitulación y el precio rebota fuerte
     elif change_24h > 4.0 and change_7d < -5.0:
         return "📈 REVERSIÓN V/B (COMPRA)"
-        
+
     # 5. Señal de RUPTURA ALCISTA (CONTINUACIÓN)
     elif change_24h > 5.0 and change_7d > 3.0 and change_7d < 10.0:
         return "🚀 RUPTURA ALCISTA (COMPRA)"
@@ -165,7 +165,7 @@ def compute_alert(change_24h: Optional[float], change_7d: Optional[float]) -> st
     # 7. Señal de ACUMULACIÓN (Largo Plazo)
     elif change_24h < -1.0 and change_24h > -4.0 and change_7d < -10.0:
         return "💎 ACUMULACIÓN FUERTE (LT)"
-        
+
     # 8. Señal de CRECIMIENTO SALUDABLE (MOMENTUM)
     elif change_24h > 2.0 and change_7d > 8.0:
         return "🟢 MOMENTUM SALUDABLE"
@@ -181,7 +181,7 @@ def compute_alert(change_24h: Optional[float], change_7d: Optional[float]) -> st
     # 11. Señal de ESTABILIDAD (Cierre, debe ser la última)
     elif -1.0 <= change_24h <= 1.0:
         return "⚖️ ESTABLE"
-    
+
     else:
         return ""
 
@@ -189,11 +189,11 @@ def compute_projection(current_price: Optional[float], change_24h: Optional[floa
     """Calculates a simple 48-hour price projection (LINEAR ASSUMPTION)."""
     if current_price is None or change_24h is None:
         return "N/A"
-    
+
     try:
         projection_factor = 1 + (change_24h / 100.0)
         projected_price = current_price * projection_factor
-        
+
         return format_price(projected_price)
 
     except (ValueError, TypeError):
@@ -203,7 +203,7 @@ def compute_technical_sentiment(change_24h: Optional[float], change_7d: Optional
     """Simulates a technical analysis summary (e.g., Moving Averages + RSI) based on momentum (texto plano)."""
     if change_24h is None or change_7d is None:
         return ""
-    
+
     if change_24h > 5.0 and change_7d > 10.0:
         return "FUERTE COMPRA (Golden Cross)"
     elif change_24h > 2.0 and change_7d > 0:
@@ -223,20 +223,20 @@ def compute_time_to_plr(current_price: Optional[float], change_24h: Optional[flo
     """Estimates the time it would take for the price to reach the Suggested Limit Price (PLR)."""
     if current_price is None or change_24h is None or suggested_limit_price is None or suggested_limit_price == 0:
         return "N/A"
-    
+
     target_change_pct = ((suggested_limit_price - current_price) / current_price) * 100
     velocity_per_hour = change_24h / 24.0
-    
+
     if abs(velocity_per_hour) < 0.001:
         return "N/A (Velocidad 0)"
-    
+
     if (target_change_pct > 0 and velocity_per_hour < 0) or \
        (target_change_pct < 0 and velocity_per_hour > 0):
         return "N/A (Dir. Incompatible)"
 
     try:
         hours_needed = target_change_pct / velocity_per_hour
-        
+
         if hours_needed < 0: 
             return "N/A (Reversión Necesaria)"
 
@@ -283,7 +283,7 @@ def place_limit_order_coinbase(
     if not HAS_COINBASE or client is None:
         logger.warning("Coinbase client no está disponible.")
         return None
-    
+
     account_id = get_crypto_account_id(client, symbol)
     if not account_id:
         return None
@@ -308,7 +308,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
     """Formats and prints the data to the terminal using simple text formatting."""
     rows = []
     buy_signals_data: List[Dict[str, str | float]] = [] 
-    
+
     # Pre-cálculo para determinar si se necesitan las columnas de PLR/Tiempo
     has_buy_signal_flag = any("📉 COMPRA! (DIP)" in compute_alert(coin.get("price_change_percentage_24h_in_currency"), coin.get("price_change_percentage_7d_in_currency")) for coin in data)
 
@@ -333,7 +333,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
         if "COMPRA! (DIP)" in alert_str and price is not None:
             limit_suggered_float = price * (1 - 0.02)
             limit_suggered_str = format_price(limit_suggered_float, decimal_limit=4)
-            
+
             # --- ENVÍO DE ORDEN AUTOMÁTICA A COINBASE ---
             if HAS_COINBASE and coinbase_client and DEFAULT_TRADE_AMOUNT_USD > 0 and limit_suggered_float > 0:
                 try:
@@ -359,7 +359,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
         price_str = format_price(price)
         change_24h_str = format_percent(change_24h)
         change_7d_str = format_percent(change_7d)
-        
+
         projection_48h_str = compute_projection(price, change_24h)
         technical_sentiment_str = compute_technical_sentiment(change_24h, change_7d)
         time_to_plr_str = compute_time_to_plr(price, change_24h, limit_suggered_float)
@@ -372,7 +372,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
                 delta_str = f"{pct:+.2f}%"
             except (ValueError, TypeError):
                 delta_str = ""
-        
+
         # Construir la fila de datos para impresión
         row_data = {
             "Moneda": symbol,
@@ -384,11 +384,11 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
             "Alerta": alert_str,
             "Técnico": technical_sentiment_str
         }
-        
+
         if has_buy_signal_flag:
             row_data["Límite Sugerido"] = limit_suggered_str
             row_data["Tiempo al PLR"] = time_to_plr_str
-        
+
         rows.append(row_data)
 
     # --- Impresión final (Texto Plano) ---
@@ -398,7 +398,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
         for row in rows:
             for header in active_headers:
                 col_widths[header] = max(col_widths[header], len(str(row.get(header, ''))))
-        
+
         # Función auxiliar para formatear la línea
         def format_line(data_dict: Dict[str, str], is_header: bool = False) -> str:
             line = ""
@@ -412,7 +412,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
                 else:
                     line += f"| {str(value).rjust(padding)} "
             return line + "|"
-            
+
         # Imprimir Encabezado
         header_dict = {h: h for h in active_headers}
         header_line = format_line(header_dict, is_header=True)
@@ -422,7 +422,7 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
         # Imprimir Datos
         for row in rows:
             print(format_line(row))
-        
+
         print("-" * len(header_line))
 
 
@@ -433,14 +433,15 @@ def print_table(data: List[dict], prev_prices: Dict[str, float], currency: str, 
 
 
 def send_telegram_message(bot_token: str, chat_id: str, message: str) -> bool:
-    """Sends a message to a specific Telegram chat."""
+    """Sends a message to a specific Telegram chat. USES HTML parse mode."""
     if not bot_token or not chat_id:
         logger.debug("Telegram skipped: Token or Chat ID not configured.")
         return False
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     try:
-        resp = requests.post(url, data={"chat_id": chat_id, "text": message, "parse_mode": "MarkdownV2"}, timeout=10)
+        # CAMBIO CRÍTICO: Usamos parse_mode="HTML"
+        resp = requests.post(url, data={"chat_id": chat_id, "text": message, "parse_mode": "HTML"}, timeout=10)
         resp.raise_for_status()
         return True
     except requests.RequestException as e:
@@ -450,15 +451,15 @@ def send_telegram_message(bot_token: str, chat_id: str, message: str) -> bool:
 def create_coinbase_client_instance(api_key: str, api_secret: str) -> Optional[CoinbaseClient]:
     """Inicializa el cliente de Coinbase SDK (Wallet API)."""
     global HAS_COINBASE
-    
+
     if not HAS_COINBASE:
         logger.warning("Coinbase SDK no está instalado. Automatización deshabilitada.")
         return None
-        
+
     if not api_key or not api_secret:
         logger.warning("Coinbase API Key/Secret no configurados. La automatización de trading está deshabilitada.")
         return None
-    
+
     try:
         client = CoinbaseClient(api_key, api_secret) 
         client.get_current_user() 
@@ -493,9 +494,9 @@ def main() -> None:
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    telegram_token = TELEGRAM_BOT_TOKEN 
-    telegram_chat = TELEGRAM_CHAT_ID
-    
+    telegram_token = TELEGRAM_BOT_TOKEN="8055717881:AAFQO3wJDDGE7sFNjCDLdGnwN-ZLNsJTxsk"
+    telegram_chat = TELEGRAM_CHAT_ID="-1003369064969"
+
     coinbase_client = create_coinbase_client_instance(COINBASE_API_KEY, COINBASE_API_SECRET)
 
     session = create_session(retries=args.retries)
@@ -506,8 +507,8 @@ def main() -> None:
             data = fetch_data(session, args.cryptos, args.currency, per_page=args.per_page)
             if not args.no_clear:
                 clear_terminal()
-            
-            # Reemplazamos .utcnow() por .now(datetime.UTC) para evitar el DeprecationWarning
+
+            # Reemplazamos .utcnow() por .now(datetime.UTC) para la hora
             current_time_utc = datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')
 
             # --- TÍTULO DECORADO (Texto Plano) ---
@@ -521,35 +522,43 @@ def main() -> None:
                 result = print_table(data, prev_prices, args.currency, coinbase_client) 
                 new_prev = result["prev_prices"]
                 buy_signals = result["buy_signals"]
-                
-                # Enviar notificación de Telegram (lógica se mantiene igual)
+
+                # Enviar notificación de Telegram (lógica CORREGIDA a HTML)
                 if buy_signals and telegram_token and telegram_chat:
+                    
+                    # Usamos negritas <b> </b> en modo HTML
+                    
                     msg_parts = [
-                        "🚨 *ALERTA DE COMPRA \\(DIP\\) EN EL METAVERSO* 🚨",
+                        "<b>🚨 ALERTA DE COMPRA (DIP) EN EL METAVERSO 🚨</b>",
                         "El mercado presenta oportunidades de entrada:",
                         ""
                     ]
-                    
+
                     for signal in buy_signals:
-                        symbol = str(signal['symbol']).replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace('`', '\\`')
-                        name = str(signal['name']).replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace('`', '\\`')
+                        # Obtenemos los valores sin escape riguroso (HTML no es tan estricto)
+                        symbol = str(signal['symbol'])
+                        name = str(signal['name'])
                         
-                        msg_parts.append(f"💰 *{symbol}* \\({name}\\) \\- ¡A la Caza\\! 🎯")
-                        msg_parts.append(f"   \\- Precio Actual: *{format_price(signal['price']).replace('$', '\\$').replace('.', '\\.')}*")
-                        # Usamos la versión de texto plano de format_percent
-                        pct_24h_plain = format_percent(signal['change_24h'])
-                        pct_7d_plain = format_percent(signal['change_7d'])
+                        price_str = format_price(signal['price'])
+                        pct_24h_str = format_percent(signal['change_24h'])
+                        pct_7d_str = format_percent(signal['change_7d'])
+                        limit_price_str = str(signal['limit_price'])
                         
-                        msg_parts.append(f"   \\- Var\\. 24h: {pct_24h_plain.replace('+', '\\+').replace('-', '\\-')}")
-                        msg_parts.append(f"   \\- Var\\. 7d: {pct_7d_plain.replace('+', '\\+').replace('-', '\\-')}")
-                        msg_parts.append(f"   \\- *Límite Sugerido \\(\\-2\\%\\):* *{str(signal['limit_price']).replace('$', '\\$').replace('.', '\\.')}* ✍️")
+                        
+                        msg_parts.append(f"💰 <b>{symbol}</b> ({name}) - ¡A la Caza! 🎯")
+
+                        msg_parts.append(f"   - Precio Actual: <b>{price_str}</b>")
+                        
+                        msg_parts.append(f"   - Var. 24h: {pct_24h_str}")
+                        msg_parts.append(f"   - Var. 7d: {pct_7d_str}")
+                        msg_parts.append(f"   - <b>Límite Sugerido (-2%):</b> <b>{limit_price_str}</b> ✍️")
                         msg_parts.append("") 
 
                     msg_parts.append("---")
-                    msg_parts.append("Estrategia de inversión compartida por *Non Fungible Metaverse*\\. 🚀")
-                    
+                    msg_parts.append("Estrategia de inversión compartida por <b>Non Fungible Metaverse</b>. 🚀")
+
                     msg = "\n".join(msg_parts)
-                    
+
                     if send_telegram_message(telegram_token, telegram_chat, msg):
                         logger.info("Telegram buy notification sent. 🔔")
 
@@ -560,7 +569,7 @@ def main() -> None:
             # --- MENSAJE DE CIERRE ---
             print("=========================================================================================")
             print(f"Updating in {args.interval} seconds... (Ctrl+C to stop 🛑)")
-            
+
             time.sleep(max(1, args.interval))
 
     except KeyboardInterrupt:

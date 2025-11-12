@@ -237,3 +237,11 @@ if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
     sleep 2 
     tmux attach-session -t $SESSION_NAME
 fi
+
+
+# ===================================================
+# Variables de entorno para el Crypto Analyzer (Chegui)
+# ===================================================
+export TELEGRAM_BOT_TOKEN="8055717881:AAFQO3wJDDGE7sFNjCDLdGnwN-ZLNsJTxsk"
+export TELEGRAM_CHAT_ID="-1003369064969"
+
