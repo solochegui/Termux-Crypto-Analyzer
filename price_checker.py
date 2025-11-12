@@ -41,7 +41,7 @@ COINBASE_API_SECRET = os.environ.get("COINBASE_API_SECRET", "")
 DEFAULT_TRADE_AMOUNT_USD = 10.0 # Monto de la orden de compra en USD
 
 # Defaults
-DEFAULT_CRYPTOS = "bitcoin,ethereum,solana,boricoin,pepe,bonk,ripple,xyo"
+DEFAULT_CRYPTOS = "bitcoin,ethereum,solana,boricoin,ripple,binancecoin,cardano,avalanche-2,chainlink,polygon,dogecoin,arbitrum,render-token,fetch-ai,pepe,bonk,shiba-inu,xyo"
 DEFAULT_CURRENCY = "usd"
 DEFAULT_INTERVAL = 10 # seconds
 
