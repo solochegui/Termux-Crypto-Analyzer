@@ -15,19 +15,24 @@ La combinación permite diferenciar entre un Pullback Saludable (señal de ✅ C
 La Lógica de 12 Puntos es el núcleo del sistema, proporcionando un mapa detallado del estado emocional y técnico de cada criptomoneda.
 | Señal | Condición Clave | Descripción y Acción Estratégica |
 |---|---|---|
-| ✅ ฿ɄɎ! DIP | \Delta 24h < -4\% y \Delta 7d > 0\% | 𝐏𝐮𝐧𝐭𝐨 𝐝𝐞 𝐄𝐧𝐭𝐫𝐚𝐝𝐚 𝐊𝐞𝐲. El activo corrige dentro de una tendencia semanal positiva. Sugiere ØⱤĐɆ₦ ⱠíⲘł₮Ɇ (PLR), 2% por debajo, para optimizar la entrada. |
-| 📈 ℛℰᏉℰℛЅℐóℕ V/B | \Delta 24h > 4\% y \Delta 7d < -5\% | ℛℯ𝒷ℴ𝓉ℯ 𝒜ℊ𝓇ℯ𝓈𝒾𝓋ℴ. El precio rebotó con fuerza tras un soporte semanal. Confirma COMPRA DE REBOTE. |
-| 💎 𝔸ℂ𝕌𝕄𝕌𝕃𝔸ℂ𝕀óℕ | -5\% \leq \Delta 24h \leq 0\% y \Delta 7d < -15\% | Fase de Consolidación L/P. El pánico se detuvo. Ideal para Acumulación Larga Plazo (LT). |
-| 🚀 ⓇⓊⓅⓉⓊⓇⒶ | \Delta 24h > 5\% y \Delta 7d > 3\% | Momentum de Continuación. El activo rompió resistencia clave. Se sugiere COMPRA de Momentum. |
-| 🚨 ⒶⓁⒺⓇⓉⒶ ⓇⓄⒿⒶ | \Delta 24h > 15\% o (\Delta 24h > 10\% y \Delta 7d > 25\%) | 🅴🆄🅵🅾🆁🅸🅰 🅴🆇🆃🆁🅴🅼🅰 (FOMO). Riesgo máximo. Se recomienda Toma de Ganancias / 🆅🅴🅽🆃🅰. |
-| ⚠️ BULL TRAP | \Delta 24h > 6\% y \Delta 7d < 0\% | Trampa. Subida sin soporte semanal. Venta / Alto Riesgo C/P. |
-| 💀 ℂ𝔸ℙ𝕀𝕋𝕌𝕃𝔸ℂ𝕀óℕ | \Delta 24h < -10\% y \Delta 7d < -20\% | 🄿🄰🄽🄸🄲🄾 🄼🄰́🅇🄸🄼🄾. Potencial COMPRA CONTRA-TENDENCIA (solo agresivos). |
-| 📉 ⒶⒼⓄⓉⒶⓂⒾⒺⓃⓉⓄ | \Delta 24h < -2.5\% tras \Delta 7d > 20\% | Advertencia de Giro. Corrección después de gran carrera. Recomienda TOMA DE GANANCIAS. |
-| 🟢 ⓂⓄⓂⒺⓃⓉⓊⓂ | \Delta 24h > 1.5\% y \Delta 7d > 5\% | Crecimiento Sostenible. Tendencia fuerte. H̶O̶L̶D̶ (mantener) la posición. |
-| 😴 ⓇⒶⓃⒼⓄ | -1.5\% \leq \Delta 24h \leq 1.5\% y -3\% \leq \Delta 7d \leq 3\% | Baja Volatilidad. El activo está consolidando. H̶O̶L̶D̶ / 🅽🅴🆄🆃🆁🅰🅻. |
-| ⚖️ 🅴🆂🆃🅰🅱🅻🅴 | -1\% \leq \Delta 24h \leq 1\% | Baja Volatilidad. Movimiento lateral. 🅽🅴🆄🆃🆁🅰🅻. |
-| ❓ 𝕋𝔼ℕ𝔻𝔼ℕℂ𝕀𝔸 | Ninguna de las anteriores. | 🅾🅱🆂🅴🆁🆅🅰🆁. No hay señal fuerte ni clara. |
-⚙️ 🆀🆄🆁 🅴🆁🅴🆀🆄🅸🆂🅸🆃🅴🆂 y Dependencias 🛠️
+|
+|---|---|---|---|
+| ✅ COMPRA! DIP | \Delta 24h < -4\% y \Delta 7d > 0\% | Corrección de la Tendencia | ORDEN LÍMITE (PLR) - Entrada óptima. |
+| 📈 REVERSIÓN V/B | \Delta 24h > 4\% y \Delta 7d < -5\% | Fuerza de Rebote | COMPRA FUERTE - Capitalizar cambio de dirección. |
+| 💎 ACUMULACIÓN L/P | \Delta 7d < -15\% y \Delta 24h Estrecho | Fin de Pánico | COMPRA LT - Acumulación en la base. |
+| 🚀 RUPTURA ALCISTA | \Delta 24h > 5\% y \Delta 7d > 3\% | Momentum de Continuación | COMPRA - Seguir el impulso de la ruptura. |
+| 🚨 ALERTA ROJA | \Delta 24h > 15\% o Euforia Extrema | Sobrecompra/Euforia | VENTA / TOMA DE GANANCIAS |
+| ⚠️ BULL TRAP | \Delta 24h > 6\% y \Delta 7d < 0\% | Subida sin Soporte | VENTA / Alto Riesgo C/P - Posible Distribución. |
+| 💀 CAPITULACIÓN | \Delta 24h < -10\% y \Delta 7d < -20\% | Pánico Máximo | COMPRA DE RIESGO - Entrada contraria a la masa. |
+| 📉 AGOTAMIENTO | \Delta 24h < -2.5\% tras \Delta 7d > 20\% | Advertencia de Giro | TOMA DE GANANCIAS - Asegurar beneficios. |
+| 🟢 MOMENTUM SALUDABLE | \Delta 24h > 1.5\% y \Delta 7d > 5\% | Crecimiento Sostenible | HOLD - Mantener la posición. |
+| 😴 RANGO ESTRECHO | Volatilidad muy baja y \Delta 7d lateral | Consolidación | HOLD / NEUTRAL - Paciencia. |
+| ⚖️ ESTABLE | \Delta 24h cerca de 0\% | Baja Volatilidad | NEUTRAL - Sin señal fuerte. |
+| ❓ TENDENCIA INDEFINIDA | Ninguna de las anteriores | Incertidumbre | OBSERVAR - Esperar confirmación. |
+🛠️ Tabla de Configuración de Variables de Entorno (Termux/NFM)
+Esta tabla resume las variables necesarias para la correcta funcionalidad de las notificaciones de Telegram y la automatización de órdenes de Coinbase.
+| Componente | Variable de Entorno | Función y Descripción |
+|---|---|---|🛠️
 Para ejecutar el analizador en tu entorno, necesitas las siguientes dependencias:
  * Python 3.8+ 🐍
  * Librerías Python: requests (para CoinGecko API) y coinbase (para automatización).
