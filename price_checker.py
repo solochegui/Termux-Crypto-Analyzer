@@ -517,45 +517,62 @@ def main() -> None:
             print("--- 🧠 Analizador Avanzado de Precios Crypto (CLI) 🚀 ---")
             print(f"Última Actualización: {current_time_utc} UTC | Cryptos: {args.cryptos} | Fiat: {args.currency}")
             print("=========================================================================================")
-
+                  
             if data:
                 result = print_table(data, prev_prices, args.currency, coinbase_client) 
                 new_prev = result["prev_prices"]
                 buy_signals = result["buy_signals"]
 
-                # Enviar notificación de Telegram (lógica CORREGIDA a HTML)
+                # Enviar notificación de Telegram (VERSIÓN AVANZADA NFM con Referido)
                 if buy_signals and telegram_token and telegram_chat:
+
+                    key_buy_signal = "✅ COMPRA! DIP (ORDEN LÍMITE RECOMENDADA)"
                     
-                    # Usamos negritas <b> </b> en modo HTML
-                    
+                    # --- 1. ENCABEZADO Y DEFINICIÓN DEL ANÁLISIS ---
                     msg_parts = [
-                        "<b>🚨 ALERTA DE COMPRA (DIP) EN EL METAVERSO 🚨</b>",
-                        "El mercado presenta oportunidades de entrada:",
-                        ""
+                        "<b>🔥 ALERTA ÉPICA 🔥</b>",
+                        "El mercado está ofreciendo un <i>pullback saludable</i> dentro de una tendencia alcista.",
+                        "Estrategia activada: <b>COMPRA LÍMITE</b> (-2% del precio actual) para maximizar ganancias.",
+                        "",
+                        "--- **ANÁLISIS DETALLADO** ---"
                     ]
 
                     for signal in buy_signals:
-                        # Obtenemos los valores sin escape riguroso (HTML no es tan estricto)
-                        symbol = str(signal['symbol'])
-                        name = str(signal['name'])
-                        
+                        symbol = str(signal['symbol']).upper()
+                        name = str(signal['name']).upper()
+
                         price_str = format_price(signal['price'])
                         pct_24h_str = format_percent(signal['change_24h'])
                         pct_7d_str = format_percent(signal['change_7d'])
                         limit_price_str = str(signal['limit_price'])
                         
-                        
-                        msg_parts.append(f"💰 <b>{symbol}</b> ({name}) - ¡A la Caza! 🎯")
+                        # Definición descriptiva basada en la señal DIP
+                        definition = (
+                            "📈 <i>Corrección de Momentum:</i> La caída de -4% o más en 24h es una toma de ganancias "
+                            "que no ha roto el soporte semanal. El volumen sugiere <b>Reacumulación</b>."
+                        )
 
-                        msg_parts.append(f"   - Precio Actual: <b>{price_str}</b>")
-                        
-                        msg_parts.append(f"   - Var. 24h: {pct_24h_str}")
-                        msg_parts.append(f"   - Var. 7d: {pct_7d_str}")
-                        msg_parts.append(f"   - <b>Límite Sugerido (-2%):</b> <b>{limit_price_str}</b> ✍️")
-                        msg_parts.append("") 
+                        msg_parts.append("")
+                        msg_parts.append(f"💰 **ACTIVO: {symbol}** ({name}) 🎯")
+                        msg_parts.append(f"   - 📊 <b>Precio Actual:</b> <u>{price_str}</u> USD")
+                        msg_parts.append(f"   - 📉 <b>Var. 24h/7d:</b> {pct_24h_str} / {pct_7d_str}")
+                        msg_parts.append(f"   - 🚀 <b>PLR Sugerido (Orden Límite):</b> <b>{limit_price_str}</b>")
+                        msg_parts.append(f"   - 🧐 <b>Definición del Análisis:</b> {definition}")
+                        msg_parts.append(f"   - ✍️ <b>Sugerencia Precisa:</b> Ejecutar <b>Orden Límite</b> en Coinbase Advanced/Binance a <u>{limit_price_str}</u> USD.")
 
+                    # --- 2. PIE DE MENSAJE, ESTRATEGIA Y REFERIDO ---
+                    msg_parts.append("") 
                     msg_parts.append("---")
-                    msg_parts.append("Estrategia de inversión compartida por <b>Non Fungible Metaverse</b>. 🚀")
+                    
+                    # --- NUEVO BLOQUE DE REFERIDO ---
+                    msg_parts.append("🤝 **RECOMENDACIÓN DE EXCHANGE**")
+                    msg_parts.append("Si aún no tienes cuenta, regístrate en **Coinbase** con mi enlace y ambos ganaremos <b>10 USD en BTC</b>.")
+                    msg_parts.append("🔗 <b>LINK DE REGISTRO:</b> https://coinbase.com/join/QHMF3XN?src=android-share")
+                    msg_parts.append("")
+                    # -------------------------------
+                    
+                    msg_parts.append("Estrategia de trading con órdenes límite compartida por <b>Chegüi / Non Fungible Metaverse</b>.")
+                    msg_parts.append("<i>¡No compres con Miedo! Compra con estrategia.</i> 🌐")
 
                     msg = "\n".join(msg_parts)
 
@@ -566,6 +583,7 @@ def main() -> None:
             else:
                 logger.warning("No data retrieved from CoinGecko. Retrying... 🔄")
 
+               
             # --- MENSAJE DE CIERRE ---
             print("=========================================================================================")
             print(f"Updating in {args.interval} seconds... (Ctrl+C to stop 🛑)")
@@ -573,7 +591,7 @@ def main() -> None:
             time.sleep(max(1, args.interval))
 
     except KeyboardInterrupt:
-        print("\nAnalyzer stopped. Happy trading in the 🌐 Metaverse!")
+        print("\nAnalyzer stopped. Happy trading in the 🌐 Coinbase advanced!")
         sys.exit(0)
     except Exception as e:
         logger.critical(f"An unexpected error occurred: {e}", exc_info=True)
